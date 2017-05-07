@@ -1,0 +1,238 @@
+Defining constants and functions in Caml is done through the let keyword.
+• let x = 2;; defines a constant x with value 2.
+• let double a = 2 ∗ a;; defines a function double that returns the double of its parameter.
+
+Another possible syntax is let double = fun a → 2 ∗ a;;.
+• let x = <value> in <expr>;; binds x to value, but only in expr.
+
+2 The OCaml interpreter
+The command ocaml (without parameters) launches the Caml interpreter. You can type
+Caml instructions inside and immediately get their result—it is highly recommended to
+use the ledit command with ocaml as argument to make interacting with this interpreter
+bearable.
+
+For instance, you can type:
+# let x = 2 ;;
+val x : int = 2
+# let double = fun a → 2 ∗ a ;;
+val ouble : int → int = <fun>
+The shell returns information about the newly defined object in the form 
+val <name> : <type> = <value>.
+
+Function types are of the form <type_param> → <type_result>.
+
+You may want to import a source file in the interpreter. You can do so by using the
+command #use ”file.ml”;;. You can also directly run a file outside the interpreter by:
+ocaml file.ml. If you are using an external module, you might need to provide the
+ocaml command with a path, e.g. ocaml -I +labltk to add the LablTK library.
+
+
+3 Polymorphism, Pairs
+Let us look at the identity function:
+# let id = fun x → x
+val id : ’ a → ’ a = <fun>
+
+This is a polymorphic function. It can take any type as input, and returns a value
+of the same type.
+Given x and y, a pair can be built by using the notation (x, y). If x is of type ’a and
+y of type ’b, then (x, y) is of product type ’a ∗ ’b.
+
+4 Curryfication
+Let us redefine addition:
+# let addition x y = x + y ;;
+val addition : int → int → int = <fun>
+# addition 2 ;;
+− : int → int = <fun>
+Defined like this, addition is a function of type int → (int → int), that is, a function
+that takes an integer and returns ‘a function that takes an integer and returns an integer’.
+This is called curryfication. This is the preferred way of defining functions with more
+than one parameter (instead of using pairs).
+
+5 Recursion
+If you want to define a recursive function, 
+then the rec keyword must be added:
+
+# let f x = if x = 0 then 0 else ( 1 + f ( x − 1 ) ) ;;
+Error : Unbound value f
+# let rec f x = if x=0 then 0 else ( 1 + f ( x − 1 ) ) ;;
+val f : int → int = <fun>
+
+6 Sum Types, Pattern Matching
+A sum type can be defined by the following syntax:
+# type sumtype = FirstCase [of type] |
+> SecondCase [of type] . . . |
+> LastCase [of type]
+
+This can be recursive. For example, Caml lists could be defined by:
+# type ’a list = Nil | Cons of ’a ∗ ’a list
+Then, you could build a list by using the syntax Cons(1, Cons(2, Nil)).
+
+7 References
+Up to now, we only used constants, and never mutable variables. So, how can we modify
+a variable value? A possible answer could be that you should never use mutable variables
+in Caml, but their use can sometimes be justified. To define a mutable variable (called
+a reference), do:
+# let x = ref (0) ;;
+val x : int ref = { contents = 0}
+You can assign and retrieve the value of a reference by using := and !:
+# x := 1 ;;
+# !x ;;
+− int = 1
+
+Syntax
+Implementations are in .ml files, interfaces are in .mli files.
+Comments can be nested, between delimiters (*...*)
+Integers: 123, 1_000, 0x4533, 0o773, 0b1010101
+Chars: ’a’, ’\255’, ’\xFF’, ’\n’ Floats: 0.1, -1.234e-34
+
+Data Types
+unit Void, takes only one value: ()
+int Integer of either 31 or 63 bits, like 32
+int32 32 bits Integer, like 32l
+int64 64 bits Integer, like 32L
+float Double precision float, like 1.0
+bool Boolean, takes two values: true or false
+char Simple ASCII characters, like ’A’
+string Strings of chars, like "Hello"
+’a list Lists, like head :: tail or [1;2;3]
+’a array Arrays, like [|1;2;3|]
+t1 * ... * tn Tuples, like (1,"foo", ’b’)
+
+Constructed Types
+type record = new record type
+{ field1 : bool; immutable field
+mutable field2 : int; } mutable field
+type enum = new variant type
+| Constant Constant constructor
+| Param of string Constructor with arg
+| Pair of string * int Constructor with args
+
+Constructed Values
+let r = { field1 = true; field2 = 3; }
+let r’ = { r with field1 = false }
+r.field2 <- r.field2 + 1;
+let c = Constant
+let c’ = Param "foo"
+let c’’ = Pair ("bar",3)
+
+References, Strings and Arrays
+let x = ref 3 integer reference (mutable)
+x := 4 reference assignation
+print_int !x; reference access
+s.[0] string char access
+s.[0] <- ’a’ string char modification
+t.(0) array element access
+t.(0) <- x array element modification
+
+Imports — Namespaces
+open Unix;; global open
+let open Unix in expr local open
+Unix.(expr) local open
+
+Functions
+let f x = expr function with one arg
+let rec f x = expr recursive function
+apply: f x
+let f x y = expr with two args
+apply: f x y
+let f (x,y) = expr with a pair as arg
+apply: f (x,y)
+List.iter (fun x -> e) l anonymous function
+let f= function None -> act function definition
+| Some x -> act by cases
+apply: f (Some x)
+let f ~str ~len = expr with labeled args
+apply: f ~str:s ~len:10
+apply (for ~str:str): f ~str ~len
+let f ?len ~str = expr with optional arg (option)
+let f ?(len=0) ~str = expr optional arg default
+apply (with omitted arg): f ~str:s
+apply (with commuting): f ~str:s ~len:12
+apply (len: int option): f ?len ~str:s
+apply (explicitely ommited): f ?len:None ~str:s
+let f (x : int) = expr arg has constrainted type
+let f : ’a ’b. ’a*’b -> ’a function with constrainted
+= fun (x,y) -> x polymorphic type
+
+Modules
+module M = struct .. end module definition
+module M: sig .. end= struct .. end module and signature
+module M = Unix module renaming
+include M include items from
+module type Sg = sig .. end signature definition
+module type Sg = module type of M signature of module
+let module M = struct .. end in .. local module
+let m = (module M : Sg) to 1st-class module
+module M = (val m : Sg) from 1st-class module
+module Make(S: Sg) = struct .. end functor
+module M = Make(M’) functor application
+Module type items:
+val, external, type, exception, module, open, include,
+class
+
+Pattern-matching
+match expr with
+| pattern -> action
+| pattern when guard -> action conditional case
+| _ -> action default case
+Patterns:
+| Pair (x,y) -> variant pattern
+| { field = 3; _ } -> record pattern
+| head :: tail -> list pattern
+| [1;2;x] -> list-pattern
+| (Some x) as y -> with extra binding
+| (1,x) | (x,0) -> or-pattern
+
+Conditionals
+Structural Physical
+= == Polymorphic Equality
+<> != Polymorphic Inequality
+Polymorphic Generic Comparison Function: compare
+x < y x = y x > y
+compare x y -1 0 1
+Other Polymorphic Comparisons : >, >=, <, <=
+Loops
+while cond do ... done;
+for var = min_value to max_value do ... done;
+for var = max_value downto min_value do ... done;
+Exceptions
+exception MyExn new exception
+exception MyExn of t * t’ same with arguments
+exception MyFail = Failure rename exception with args
+raise MyExn raise an exception
+raise (MyExn (args)) raise with args
+try expression
+with Myn -> ...
+catch MyException if raised
+in expression
+Objects and Classes
+class virtual foo x = virtual class with arg
+let y = x+2 in init before object creation
+object (self: ’a) object with self reference
+val mutable variable = x mutable instance variable
+method get = variable accessor
+method set z =
+variable <- z+y mutator
+method virtual copy : ’a virtual method
+initializer init after object creation
+self#set (self#get+1)
+end
+class bar = non-virtual class
+let var = 42 in class variable
+fun z -> object constructor argument
+inherit foo z as super inheritance and ancestor reference
+method! set y = method explicitely overriden
+super#set (y+4) access to ancestor
+method copy = {< x = 5 >} copy with change
+end
+let obj = new bar 3 new object
+obj#set 4; obj#get method invocation
+let obj = object .. end immediate object
+Polymorphic variants
+type t = [ ‘A | ‘B of int ] closed variant
+type u = [ ‘A | ‘C of float ]
+type v = [ t | u | ] union of variants
+let f : [< t ] -> int = function argument must be
+| ‘A -> 0 | ‘B n -> n a subtype of t
+let f : [> t ] -> int = function t is a subtype
+| ‘A -> 0 | ‘B n -> n | _ -> 1 of the argument
