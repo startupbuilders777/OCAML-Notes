@@ -64,4 +64,92 @@ and insert elem = function
     | x :: l -> if elem < x then elem :: x :: l
                 else x :: insert elem l ;;
 
+(*
+val sort : 'a list -> 'a list = <fun>
+val insert : 'a -> 'a list -> 'a list = <fun>
+*)
 
+sort [2; 1; 0];;
+(* - : int list = [0; 1; 2] *)
+let sortedList = sort ["yes"; "ok"; "sure"; "ya"; "yep"];;
+(* - : string list = ["ok"; "sure"; "ya"; "yep"; "yes"] *)
+
+List.iter (fun x -> print_string x) sortedList;;
+
+(*
+Let us encode polynomials as arrays of integer coefficients. 
+Then, to add two polynomials, we first allocate the result array, 
+then fill its slots using two successive for loops.
+
+
+
+*)
+
+let add_polynom p1 p2 = 
+    let n1 = Array.length p1
+    and n2 = Array.length p2 in
+    let result = Array
+.create (max n1 n2) 0 in
+    for i = 0 to n1 - 1 do result.(i) <- p1.(i) done;
+    for i = 0 to n2 - 1 do result.(i) <- result.(i) + p2.(i) done;
+    result;;
+
+add_polynom [| 1; 2 |] [| 1; 2; 3 |];;
+
+(*
+OCaml offers updatable memory cells, called references: 
+ref init returns a new cell with initial contents init, 
+!cell returns the current contents of cell, and cell := v 
+writes the value v into cell.
+
+We may redefine fact using a reference cell and a for loop:
+
+*)
+
+let fact n = 
+    let result = ref 1 in 
+    for i = 2 to n do 
+        result := i * !result
+    done;
+    !result ;;
+
+fact 5;; 
+
+(*HIGHER ORDER FUNCTIONS 
+There is no restriction on functions, which may thus 
+be passed as arguments to other functions. Let us define a 
+function sigma that returns the sum of the results of applying 
+a given function f to each element of a list:
+
+///////////////////////////////////*)
+
+let rec sigma f = function
+    | [] -> 0
+    | x :: l -> f x + sigma f l ;;
+(* val sigma : ('a -> int) -> 'a list -> int = <fun> *)
+
+let yummy = sigma (fun x -> x*x) [1;2;3];;
+let () = Printf.printf "\nYUmmy: %d\n" yummy
+
+let compose f g = fun x -> f (g x)
+let square_o_fact = compose square fact ;; 
+
+let composedValue = square_o_fact 5;;
+
+let () = Printf.printf "composedValue: %d\n" composedValue
+
+(* You are on power of functions *)
+
+
+(*PRINTING STUFF /////////////////////////////////////////*)
+
+let print_list f lst = 
+    let rec print_elements = function
+        | [] -> ()
+        | h :: t -> f h; print_string ";"; print_elements t
+    in
+    print_string "[";
+    print_elements lst;
+    print_string "]";;
+
+print_list print_int [3;6;78;5;2;34;7];;
