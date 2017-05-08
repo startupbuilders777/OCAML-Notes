@@ -32,7 +32,7 @@ the opposite operation.
 *)
 
 let decurry curriedFunction = 
-    let pairedFunction (a, b) = curriedFunction a b
+    let pairedFunction (a, b) = curriedFunction a b in
     pairedFunction;;
 
 
@@ -40,15 +40,46 @@ let decurry curriedFunction =
 Exercise 4. The function List .map of type (’ a → ’b) → ’a list → ’b list takes a function
 and a list and returns the list obtained by applying the function to each element of the
 initial list. Write a function add1 that takes a list and adds 1 to each element of this list.
+*)
 
+let addOneToList lst = List.map(fun a -> a + 1) lst;;
+
+let poop = 1::2::3::[];;
+let poopPlus1 = addOneToList poop;;
+
+List.iter (fun x -> print_int x) poopPlus1;;
+
+
+
+(*
 Exercise 5. Write a function fibonacci such that fibonacci n 
 returns the nth term of the
 Fibonacci sequence.
+*)
 
+let rec fibn n =
+    match n<=2 with
+    | true -> 1
+    | false -> fibn(n-2) + fibn(n-1);;
+
+fibn 4;;
+
+
+(*
 Exercise 6. Test your Fibonacci function with n = 5, then n = 400. 
 If this does not
 terminate within a reasonable time, improve your function!
+*)
 
+let rec fibni n prevAccum currAccum =
+    if n = 0 
+    then prevAccum + currAccum
+    else 
+    fibni((n-1) currAccum (prevAccum + currAccum));;
+
+fibni 7 0 1;;
+
+(*
 Exercise 7. Define a type that can represent propositional formulæ with the Not, And,
 and Or connectives and a Var constructor for variable names (using strings for names).
 The interest of sum types lies with pattern matching. You can use the following
