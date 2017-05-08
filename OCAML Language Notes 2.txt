@@ -1,0 +1,199 @@
+The and keyword is used either to avoid multiple let 
+(first example, I never use it for this but why not) or for 
+mutually recursive definitions of types, functions, modules...
+
+As you can see in your second example :
+
+let rec debug stack env (r, ty) =
+   ...
+   | Tunresolved tyl -> o "intersect("; debugl stack env tyl; o ")"
+   ...
+
+ and debugl stack env x =
+   ...
+   | [x] -> debug stack env x
+   ...
+debug calls debugl and vice versa. So the and is allowing that.
+
+[EDIT] It bothered me not to give a proper example so here is one example that you'll often see :
+
+ let rec is_even x =
+   if x = 0 then true else is_odd (x - 1)
+ and is_odd x =
+   if x = 0 then false else is_even (x - 1)
+(You can find this example here)
+
+For mutually recursive types, it's harder to find a configuration but following this wikipedia 
+page we would define trees and forests as follow
+
+ type 'a tree = Empty | Node of 'a * 'a forest
+ and 'a forest = Nil | Cons of 'a tree * 'a forest
+As an example, a forest composed of the empty tree, the singleton tree labeled 'a' and a 
+two nodes tree with labels 'b' and 'c' would then be represented as :
+
+ let f1 = Cons (Empty, (* Empty tree *)
+             Cons (Node ('a',  (* Singleton tree *)
+                         Nil), (* End of the first tree *)
+                   Cons (Node ('b', (* Tree composed by 'b'... *)
+                               Cons (Node ('c', (* and 'c' *)
+                                           Nil), 
+                                     Nil)
+                           ),
+                         Nil (* End ot the second tree *)
+                     )
+               )
+         );;
+And the size function (counting the number of nodes in the forest) would be :
+
+let rec size_tree = function
+  | Empty -> 0
+  | Node (_, f) -> 1 + size_forest f
+and size_forest = function
+  | Nil -> 0
+  | Cons (t, f) -> size_tree t + size_forest f
+And we get
+
+# size_forest f1;;
+- : int = 3
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+Local "variables" (really local expressions)
+
+Let's take the average function and add a local variable in C. (Compare it to the first definition we had above).
+
+double average (double a, double b)
+{
+  double sum = a + b;
+  return sum / 2;
+}
+Now let's do the same to our OCaml version:
+
+# let average a b =
+    let sum = a +. b in
+    sum /. 2.0;;
+val average : float -> float -> float = <fun>
+The standard phrase let name = expression in is used to define a named local expression, and name can then be used later on in the function instead of expression, till a ;; which ends the block of code. Notice that we don't indent after the in. Just think of let ... in as if it were a statement.
+
+Now comparing C local variables and these named local expressions is a sleight of hand. In fact they are somewhat different. The C variable sum has a slot allocated for it on the stack. You can assign to sum later in the function if you want, or even take the address of sum. This is NOT true for the OCaml version. In the OCaml version, sum is just a shorthand name for the expression a +. b. There is no way to assign to sum or change its value in any way. (We'll see how you can do variables whose value changes in a minute).
+
+Here's another example to make this clearer. The following two code snippets should return the same value (namely (a+b) + (a+b)²):
+
+# let f a b =
+    (a +. b) +. (a +. b) ** 2.;;
+val f : float -> float -> float = <fun>
+# let f a b =
+    let x = a +. b in
+    x +. x ** 2.;;
+val f : float -> float -> float = <fun>
+The second version might be faster (but most compilers ought to be able to perform this step of "common subexpression elimination" for you), and it is certainly easier to read. x in the second example is just shorthand for a +. b.
+
+Global "variables" (really global expressions)
+
+You can also define global names for things at the top level, and as with our local "variables" above, these aren't really variable at all, just shorthand names for things. Here's a real (but cut-down) example:
+
+let html =
+  let content = read_whole_file file in
+  GHtml.html_from_string content
+  ;;
+
+let menu_bold () =
+  match bold_button#active with
+  | true -> html#set_font_style ~enable:[`BOLD] ()
+  | false -> html#set_font_style ~disable:[`BOLD] ()
+  ;;
+
+let main () =
+  (* code omitted *)
+  factory#add_item "Cut" ~key:_X ~callback: html#cut
+  ;;
+In this real piece of code, html is an HTML editing widget (an object from the lablgtk library) which is created once at the beginning of the program by the first let html = statement. It is then referred to in several later functions.
+
+Note that the html name in the code snippet above shouldn't really be compared to a real global variable as in C or other imperative languages. There is no space allocated to "store" the "html pointer". Nor is it possible to assign anything to html, for example to reassign it to point to a different widget. In the next section we'll talk about references, which are real variables.
+
+Let-bindings
+
+Any use of let ..., whether at the top level (globally) or within a function, is often called a let-binding.
+
+References: real variables
+
+What happens if you want a real variable that you can assign to and change throughout your program? You need to use a reference. References are very similar to pointers in C/C++. In Java, all variables which store objects are really references (pointers) to the objects. In Perl, references are references - the same thing as in OCaml.
+
+Here's how we create a reference to an int in OCaml:
+
+# ref 0;;
+- : int ref = {contents = 0}
+Actually that statement wasn't really very useful. We created the reference and then, because we didn't name it, the garbage collector came along and collected it immediately afterwards! (actually, it was probably thrown away at compile-time.) Let's name the reference:
+
+# let my_ref = ref 0;;
+val my_ref : int ref = {contents = 0}
+This reference is currently storing a zero integer. Let's put something else into it (assignment):
+
+# my_ref := 100;;
+- : unit = ()
+And let's find out what the reference contains now:
+
+# !my_ref;;
+- : int = 100
+So the := operator is used to assign to references, and the ! operator dereferences to get out the contents. Here's a rough-and-ready comparison with C/C++:
+
+OCaml
+
+# let my_ref = ref 0;;
+val my_ref : int ref = {contents = 0}
+# my_ref := 100;;
+- : unit = ()
+# !my_ref;;
+- : int = 100
+C/C++
+
+int a = 0; int *my_ptr = &a;
+*my_ptr = 100;
+*my_ptr;
+References have their place, but you may find that you don't use references very often. Much more often you'll be using let name = expression in to name local expressions in your function definitions.
+
+Nested functions
+
+C doesn't really have a concept of nested functions. GCC supports nested functions for C programs but I don't know of any program which actually uses this extension. Anyway, here's what the gcc info page has to say about nested functions:
+
+A "nested function" is a function defined inside another function. (Nested functions are not supported for GNU C++.) The nested function's name is local to the block where it is defined. For example, here we define a nested function named 'square', and call it twice:
+
+foo (double a, double b)
+{
+  double square (double z) { return z * z; }
+
+  return square (a) + square (b);
+}
+The nested function can access all the variables of the containing function that are visible at the point of its definition. This is called "lexical scoping". For example, here we show a nested function which uses an inherited variable named offset:
+
+bar (int *array, int offset, int size)
+{
+  int access (int *array, int index)
+    { return array[index + offset]; }
+  int i;
+  /* ... */
+  for (i = 0; i < size; i++)
+    /* ... */ access (array, i) /* ... */
+}
+You get the idea. Nested functions are, however, very useful and very heavily used in OCaml. Here is an example of a nested function from some real code:
+
+# let read_whole_channel chan =
+    let buf = Buffer.create 4096 in
+    let rec loop () =
+      let newline = input_line chan in
+      Buffer.add_string buf newline;
+      Buffer.add_char buf '\n';
+      loop ()
+    in
+    try
+      loop ()
+    with
+      End_of_file -> Buffer.contents buf;;
+val read_whole_channel : in_channel -> string = <fun>
+Don't worry about what this code does - it contains many concepts which haven't been discussed in this tutorial yet. Concentrate instead on the central nested function called loop which takes just a unit argument. You can call loop () from within the function read_whole_channel, but it's not defined outside this function. The nested function can access variables defined in the main function (here loop accesses the local names buf and chan).
+
+The form for nested functions is the same as for local named expressions: let name arguments = function-definition in.
+
+You normally indent the function definition on a new line as in the example above, and remember to use let rec instead of let if your function is recursive (as it is in that example).
+
