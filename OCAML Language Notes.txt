@@ -1,3 +1,76 @@
+FUNCTIONS:
+Functions are values just like any other value in OCaml. What does that mean exactly? This means that we can pass functions around as arguments to other functions, that we can store functions in data structures, that we can return functions as a result from other functions. 
+
+let double (x : int) : int = 2 * x
+let square (x : int) : int = x * x
+
+let quad (x : int) : int = double (double x)
+let fourth (x : int) : int = square (square x)
+
+There is an obvious similarity between these two functions: what they do is apply a given function twice to a value. By passing in the function to another function twice as an argument, we can abstract this functionality and thus reuse code:
+
+let twice ((f : int -> int), (x : int)) : int = f (f x)
+let quad (x : int) : int = twice (double, x)
+let fourth (x : int) : int = twice (square, x)
+
+To avoid polluting the top-level namespace, it can be useful to define the function locally to pass in as an argument. For example:
+
+let fourth (x : int) : int =
+  let square (y : int) : int = y * y in
+    twice (square, x)
+
+ANONYMOUS FUNCTIONS
+
+let fourth (x : int) : int = twice (fun (y : int) -> y * y, x)
+
+The fun expression creates an anonymous function: a function without a name. The type makes things actually clearer. The return type of an anonymous function is not declared (and is inferred automatically). 
+
+What is the type of 
+fun (y : int) -> y = 3 ?
+Answer: int -> bool
+
+Notice that the declaration 
+
+let square : int -> int = fun (y : int) -> y * y
+
+has the same effect as
+
+let square (y : int) : int = y * y
+
+In fact, the declaration without fun is just syntactic sugar for the more tedious long definition. (This isn't true for recursive functions, however.)
+
+CURRYING
+
+Anonymous functions are useful for creating functions to pass as arguments to other functions, but are also useful for writing functions that return other functions. Let us rewrite the twice function to take a function as an argument and return a new function that applies the original function twice:
+
+let twice (f : int -> int) =
+  fun (x : int) -> f (f x)
+
+let fourth = twice (fun (x : int) -> x * x)
+let quad = twice (fun (x : int) -> 2 * x)
+
+Functions that return other functions are so common in functional programming that OCaml provides a special syntax for them.  For example, we could write the twice function above as
+
+let twice (f : int -> int) (x : int) : int = f (f x)
+
+
+The "second argument" x here is not an argument to twice, but rather an argument to twice f.  The function twice takes only one argument, namely a function f, and returns another function that takes an argument x and returns an int.  The distinction here is critical.
+
+This device is called currying after the logician H. B. Curry. At this point you may be worried about the efficiency of returning an intermediate function when you're just going to pass all the arguments at once anyway. Run a test if you want (you should find out how to do this), but rest assured that curried functions are entirely normal in functional languages, so there is no speed penalty worth worrying about.
+
+The type of twice is (int -> int) -> int -> int.  The -> operator is right associative, so this is equivalent to (int -> int) -> (int -> int).  Notice that if we had left out the parentheses on the type of f, we would no longer long have a function that took in another function as an argument, since int -> int -> int -> int is equivalent to int -> (int -> (int -> int)).
+
+Here are more examples of useful higher-order functions that we will leave you to ponder (and try out at home):
+
+let compose ((f, g) : (int -> int) * (int -> int)) (x : int) : int = f (g x)
+
+let rec ntimes ((f, n) : (int -> int) * int) =
+  if n = 0
+  then (fun (x : int) -> x)
+  else compose (f, ntimes (f, n - 1))
+
+
+
 Defining constants and functions in Caml is done through the let keyword.
 • let x = 2;; defines a constant x with value 2.
 • let double a = 2 ∗ a;; defines a function double that returns the double of its parameter.
@@ -236,3 +309,35 @@ let f : [< t ] -> int = function argument must be
 | ‘A -> 0 | ‘B n -> n a subtype of t
 let f : [> t ] -> int = function t is a subtype
 | ‘A -> 0 | ‘B n -> n | _ -> 1 of the argument
+
+
+Side effects
+
+Up until now, we have only shown you pure functional programming.  But in certain cases, imperative programming is unavoidable.  One such case is printing a value to the screen.  By now you may have found it difficult to debug your OCaml code without any way to display intermediate values on the screen.  OCaml provides the function print_string : string -> unit to print a string to the screen.
+Printing to the screen is called a side-effect because it alters the state of the computer.  Until now we have been writing functions that do not change any state but merely compute some value.  Later on we will show you more examples of side-effects, but printing will suffice for now.
+Because of OCaml's type system, print_string is not overloaded like Java's System.out.println.  To print an int, float, bool, etc, you must first convert it to a string.  Fortunately, there are built-in functions to do this conversion. For example, string_of_int converts an int to a string.  So to print 3, we can write print_string (string_of_int 3).  The parentheses are needed here bacause OCaml evaluates expressions left to right.
+So how can you put print statements in your code?  There are two ways.  The first is with a let expression. These can be placed inside other let expressions, allowing you to print intermediate values.
+let x = 3 in
+  let () = print_string ("Value of x is " ^ (string_of_int x)) in
+  x + 1
+  
+There is a second way as well.  For this we introduce new syntax.
+e ::= ...  |  ( e1; ... ; en )
+This expression tells OCaml to evaluate expressions e1,...,en in order and return the result of evaluating en.  So we could write our example as
+let x = 3 in
+  (print_string ("Value of x is " ^ (string_of_int x));
+   x + 1)
+Exceptions
+
+To handle errors, OCaml provides built in exceptions, much like Java.  To declare an exception named Error, you write
+exception Error
+Then to throw the exception, we use the raise keyword.  An example using the square root function is
+let sqrt1 (x : float) : float =
+  if x < 0 then raise Error
+  else sqrt x
+The type of an exception matches the code in which the exception is thrown.  So for example, in the sqrt1 function, the type of Error will be float since the expression must evaluate to a real.
+Exceptions can also carry values.  An example is the built-in exception Failure, defined as
+exception Failure of string
+To raise this exception, we write
+raise (Failure "Some error message")
+We can also catch exceptions by use of the try-with keywords.  It is important not to abuse this capability.  Excessive use of exceptions can lead to unreadable spaghetti code.  For this class, it will probably never be necessary to handle an exception.  Exceptions should only be raised in truly exceptional cases, that is, when some unrecoverable damage has been done.  If you can avoid an exception by checking bounds or using options, this is far preferable.  Refer to the OCaml style guide for more examples and info on how to use exceptions properly.
