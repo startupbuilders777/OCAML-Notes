@@ -77,7 +77,49 @@ let length lst =
     length_rec 0 lst ;;
 
 (*
-
+OCaml standard library has List.rev but we ask that you reimplement it.
+# rev ["a" ; "b" ; "c"];;
+- : string list = ["c"; "b"; "a"]
 *)
 
-let reverse lst = 
+let rev list =
+    let rec aux acc = function
+      | [] -> acc
+      | h::t -> aux (h::acc) t in
+    aux [] list;;
+
+(*
+
+Find out whether a list is a palindrome. (easy)
+
+HINT: a palindrome is its own reverse
+
+# is_palindrome [ "x" ; "a" ; "m" ; "a" ; "x" ];;
+- : bool = true
+# not (is_palindrome [ "a" ; "b" ]);;
+- : bool = true
+*)
+
+let isPalindrome lst = lst =  List.rev lst ;;
+
+(*
+Flatten a nested list structure. (medium)
+
+(* There is no nested list type in OCaml, so we 
+need to  define one
+first. A node of a nested list is either an element, or 
+a list of nodes. *)
+
+  type 'a node =
+    | One of 'a 
+    | Many of 'a node list;;
+
+type 'a node = One of 'a | Many of 'a node list
+
+# flatten [ One "a" ; Many [ One "b" ; Many [ One "c" ; One "d" ] ; One "e" ] ];;
+- : string list = ["a"; "b"; "c"; "d"; "e"]
+
+*) 
+
+
+
