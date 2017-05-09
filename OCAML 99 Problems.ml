@@ -121,5 +121,16 @@ type 'a node = One of 'a | Many of 'a node list
 
 *) 
 
+type 'a node = 
+    | One of 'a
+    | Many of 'a node list;;
+
+let flatten nodes = 
+    match nodes with
+    | [] -> []
+    | h :: t -> 
+    
+    | One of b -> b 
+    | Many of 
 
 
